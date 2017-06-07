@@ -67,7 +67,20 @@ class RequestsHttpConnection(Connection):
             url = '%s?%s' % (url, urlencode(params or {}))
 
         start = time.time()
-        request = requests.Request(method=method, url=url, data=body)
+        request_kwargs = {
+            'method': method,
+            'url': url,
+            'data': body
+        }
+        ndjson_endpoints = ['_bulk', '_msearch']
+        is_ndjson = False
+        for endpoint in ndjson_endpoints:
+            if endpoint in url:
+                is_ndjson = True
+                break
+        if is_ndjson:
+            request_kwargs['headers'] = {'Content-Type': 'application/x-ndjson'}
+        request = requests.Request(**request_kwargs)
         prepared_request = self.session.prepare_request(request)
         settings = self.session.merge_environment_settings(prepared_request.url, {}, None, None, None)
         send_kwargs = {'timeout': timeout or self.timeout}
